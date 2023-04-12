@@ -1,11 +1,13 @@
-# Building an Upgradeable Contract
+# Building an Upgradeable Contract-
 
 ---
 
-## Introduction
-The concept of Smart Contract being immutable is a great idea that create enough trust to users interacting with a deployed implementation. This concept has its own downside with creator/developer not having the capability to fix any vulnerability when the case arises (since developer can not change anything on a deployed contract), giving attacker an unfair advantage over the developer. Upgradeable Contract provides solution to this smart contract problem while giving developers a good experience to maintain the immutable nature of smart contracts and logic of their implementation.
+## Introduction:
 
-## Table of Contents
+The concept of Smart Contract being immutable is a great idea that creates enough trust to the users interacting with a deployed implementation. This concept has its downside with creator/developer not having the capability to fix any vulnerability when it arises (since developer can not change anything on a deployed contract), giving attacker an unfair advantage over the developer. Upgradeable Contract provides solution to this Smart Contract problem while giving developers a good experience to maintain the immutable nature of smart contracts and logic of their implementation.
+
+## Table of Contents:
+
 - [Building an Upgradeable Contract](#building-an-upgradeable-contract)
     - [Introduction](#introduction)
     - [Table of Content](#table-of-contents)
@@ -19,23 +21,29 @@ The concept of Smart Contract being immutable is a great idea that create enough
         - [Step 4 - Interacting with our deployed contract](#STEP-4---Interacting-with-our-deployed-Contract)
         - [Step 5 - Upgrade Celo Bank contract to solve bug](#STEP-5---Upgrade-Celo-Bank-contract-to-solve-bug)
     - [Conclusion](#conclusion)
-## Objective
-By the end of this tutorial you should be able to write an upgradeable smart contract using the **Universal Upgradeable Proxy Standard (UUPS)**
+    
+## Objective:
 
-## Prerequisites
-* Knowledge of using Hardhat is important
-* Intermediate/advance knowledge in Solidity
-* Basic knowledge of using the command line
-* Understanding delegateCall
-* Understanding of vscode is a must
+By the end of this tutorial, you will be able to write an upgradeable smart contract using the **Universal Upgradeable Proxy Standard (UUPS)**
 
-## Requirements
-* Have Node.js installed from version V10. or higher
-* Have npm or yarn installed
-* vscode
+## Pre-requisites:
 
-## Tutorial
-### STEP 1 - Spin off Hardhat Environment
+* Knowledge of using [Hardhat](https://hardhat.org/). 
+* Intermediate/advance knowledge in Solidity.
+* Basic knowledge of using the command line.
+* Understanding  of delegateCall.
+* Understanding of [vscode](https://code.visualstudio.com/).
+
+## Requirements:
+
+* Have [Node.js](https://nodejs.org/en/download) installed from version V10. or higher.
+* Have [npm](https://docs.npmjs.com/cli/v8/commands/npm-install) or [yarn](https://yarnpkg.com/cli/install) installed.
+* [vscode](https://code.visualstudio.com/)
+
+## Tutorial:
+
+### **STEP 1** - Spin off Hardhat Environment:
+
 The first thing we will be doing is to create a folder for our implementation and spin off hardhat environment, go to your terminal and follow this processes below to create an environment for our implementation
 
 ```
@@ -66,21 +74,21 @@ after the command `npx hardhat` we should see something like what we have below.
 
 For this tutorial we will be using "create a typescript project", confirm this and other prompt options.
 
-### STEP 2 - Setup Upgradeable Contract
+### **STEP 2** - Setup Upgradeable Contract:
 
 We will be using a simple bank contract for this tutorial as it will give a better understanding on implementing the upgradeable standard.
 
 [Click here](https://eips.ethereum.org/EIPS/eip-1822) to know more about UUPS.
 
-Within our contract folder, we will create two files named
+Within our contract folder, we will create two files named:
 1. proxy.sol (The proxy contract that delegate call to our implementation contract)
 2. proxiable.sol (Responsible for upgrading contract)
 
-**What is Proxy contract**
+**What is Proxy contract?**
 Proxy contract is a contract (Contract A) that delegates call to another contract (Contract B) while maintaining the same storage layout(state variables).
 ![](https://i.imgur.com/pcKYn2W.png)
 
-in our proxy.sol contract, copy and paste the code below
+in our proxy.sol contract, copy and paste the code below:
 ```
 //SPDX-License-Identifier: MIT
 
@@ -122,9 +130,9 @@ Before explaining this code it's important to have some understanding on delegat
 
 The constrcutor has two parameters, *constructData* and *contractLogic*. The *constructData* takes in  the initialization calldata/payload (representing a constructor in our implementation), the *contractLogic* takes in implemetation contract address (address to delegatecall to).
 
-**A fallback function** triggered when a non-existence function is called in a contract. Whenever a user interact with proxy contract by calling a function that does not exist in the contract the fallback function will be triggered, and the logic within the fallback is being computed, giving us the ability to delegatecall to our implementation contract 
+**A fallback function** is triggered when a non-existence function is called in a contract. Whenever, a user interacts with proxy contract by calling a function that doesn't exist in the contract the fallback function will be triggered, and the logic within the fallback is being computed, giving us the ability to delegatecall to our implementation contract.
 
-in our *proxiable.sol*, copy and paste the code below
+in our *proxiable.sol*, copy and paste the code below:
 ```
 // SPDX-License-Identifier: MIT
 
@@ -148,10 +156,11 @@ contract Proxiable {
     }
 }
 ```
-*proxiable.sol contract* will be inherited by our logic contract and it is responsible for upgradeability
+*proxiable.sol contract* will be inherited by our logic contract and it is responsible for upgradeability.
 
-### STEP 3 - Simple bank contract with Withdraw defect
-We will create our simple bank contract file using the name *celoBank.sol*, then copy and paste what we have below.
+### **STEP 3** - Simple bank contract with Withdraw defect:
+
+We will create our simple bank contract file using the name *celoBank.sol*, then copy & paste what we have below.
 ```
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
@@ -193,15 +202,15 @@ contract celoBank is Proxiable{
     }
 }
 ```
-Next is to setup our hardhat config. We need to install dotenv by pasting the code below in our terminal
+Next is to setup our hardhat config. We need to install dotenv by pasting the code below in our terminal:
 
 > npm install dotenv
 
-we can then create a file named *.env* and paste our private key in our *.env*. It should look like what we have below
+We can then, create a file named *.env* and paste our private key in our *.env*. It should look like the below code:
 
 ![](https://i.imgur.com/oyfaIXR.png)
 
-Now, to the main hardhat setup for our celo alfajores testnet, copy and paste the code below in hardhat.config.ts
+Now, to the main hardhat setup for our celo alfajores testnet, copy and paste the code below in hardhat.config.ts:
 
 ```
 import "@nomicfoundation/hardhat-toolbox";
@@ -223,10 +232,10 @@ module.exports = {
 }
 
 ```
-Before moving to writing a script for our contract, we need to compile the code with this command in our terminal
+Before moving to writing a script for our contract, we need to compile the code with this command in our terminal:
 > npx hardhat compile
 
-let's go on to deploy and interact. In our *deploy.ts* copy and paste this code to deploy our contract on celo Alfajores testnet.
+let's go on to deploy and interact. In our *deploy.ts* copy and paste this code to deploy our contract on celo Alfajores testnet:
 
 ```
 import { ethers} from "hardhat";
@@ -269,36 +278,36 @@ main().catch((error) => {
 });
 
 ```
-Since we have our script fully written, we need to paste this command below in our terminal
+Since we have our script fully written, we need to paste this command below in our terminal:
 > npx hardhat run scripts/deploy.ts --network alfajores
 
 **Note:** You must have test celo in your metamask wallet, before this operation can be succesful. You can get a test celo [here](https://faucet.celo.org/).
 
-You should have something like what I have below
+You should have something like what I have below:
 
 ![](https://i.imgur.com/Pt9Wp70.png)
 
+### **STEP 4** - Interacting with our deployed Contract:
 
-### STEP 4 - Interacting with our deployed Contract
 We need to checkup our deployed contract on celo testnet explorer [here](https://alfajores.celoscan.io/) to confirm our deployment.
 ![](https://i.imgur.com/RACLxV5.png)
 
-After deployment has been confirmed, it is necessary for us to verify, so we can interact on the explorer and make our deployment readable to others.
+After deployment is confirmed, it is necessary for us to verify, so that we can interact on the explorer and make our deployment readable to others.
 
-To verify, click on the contract tab and open the link to *verify and publish* as shown below
+To verify, click on the contract tab and open the link to *verify and publish* as shown below:
 
 ![](https://i.imgur.com/N7yLCvP.png)
 
 Follow the procedures to verify (It's straight forward by following the guildlines). Verify both the implementation/logic contract (celoBank contract) and the proxy contract deployment.
 
-When you are done with the proxy contract verification, you should see something like this below.
+When you are done with the proxy contract verification, you should see something like this below:
 ![](https://i.imgur.com/MBzUcM6.png)
 
-select more options and make the explorer see it as a proxy contract. At the end it should look like what we have below.
+Select more options & make the explorer see it as a proxy contract. At the end it should look like what we have below:
 
 ![](https://i.imgur.com/6EMTQan.png)
 
-One thing you will notice is that we now have all functions available on our implementation contract here, even thought those functions are not written in our *proxy.sol*. changing the implementation contract address to a new contract address will change the available functions in proxy with a persistent storage.
+One thing you will notice is that we now have all the functions available on our implementation contract here, even though those functions aren't written in our *proxy.sol*. changing the implementation contract address to a new contract address will change the available functions in proxy with a persistent storage.
 
 Let's interact with our deployed proxy by depositing some celo and view the user balance after.
 - we connect our explorer to our wallet
@@ -307,7 +316,7 @@ Let's interact with our deployed proxy by depositing some celo and view the user
 - Lastly, we view user's balance
 ![](https://i.imgur.com/Omxsrer.png)
 
-### STEP 5 - Upgrade Celo Bank contract to solve bug
+### **STEP 5** - Upgrade Celo Bank contract to solve bug:
 
 While interacting we noticed users can deposit but cannot withdraw their funds. Traditionally, the money will be locked in the contract forever, but since this is an upgradeable contract, we can upgrade our contract to implement withdrawal.
 
@@ -315,7 +324,7 @@ This step, will guide us through on how to upgrade our contract.
 
 NOTE: The upgrade can only be done by the admin. Without the admin, the upgrade is not possible.
 
-let's go on to create another implementation with withdrawal option. name it celoBankUpgrade.sol and paste the code below
+let's go on to create another implementation with withdrawal option. name it celoBankUpgrade.sol and paste the code below:
 ```
 // SPDX-License-Identifier: MIT
 
@@ -365,7 +374,7 @@ contract celoBankUpgrade is Proxiable{
 }
 ```
 
-now that we have created a new contract with withdraw function, we need to deploy our *celoBankUpgrade.sol*. Create a deploy file with a name *deployUpgrade.ts* and paste the following code below
+Now that we have created a new contract with withdraw function, we need to deploy our *celoBankUpgrade.sol*. Create a deploy file with a name *deployUpgrade.ts* and paste the following code below:
 
 ```
 import { ethers} from "hardhat";
@@ -406,15 +415,16 @@ Now we can withdraw it through the power of upgradeable contract.
 
 ![](https://i.imgur.com/syOwpEc.png)
 
-### Conclusion
-Upgradeable contract gives us the flexibility to fix bugs in an immutable contract as we see in our practice. It is necessary to take this practice beyond creating simple bank contract and use it for real life solution.
+### Conclusion:
 
-UUPS is not the only upgradeable contract standard. We have
+Therefore, upgradeable contract gives us the flexibility to fix bugs in an immutable contract as we see in this tutorial. It is necessary to take such practices beyond creating simple bank contract and use it for real life solution.
+
+UUPS is not the only upgradeable contract standard. We have:
 - Diamond Standard (little bit advanced than UUPS)
 - Transparent Upgradeable Proxy
 
 
-Thank you for following up till the end of this tutorial, I hope you learn something new.
+Thank you for following up till the end of this tutorial, I hope you have learned something new. Good learning!!
 
 Here's a link to the project [UUPS for celo blockchain](https://)
 
