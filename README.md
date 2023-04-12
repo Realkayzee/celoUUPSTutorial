@@ -85,37 +85,45 @@ Within our contract folder, we will create two files named:
 2. proxiable.sol (Responsible for upgrading contract)
 
 **What is Proxy contract?**
+
 Proxy contract is a contract (Contract A) that delegates call to another contract (Contract B) while maintaining the same storage layout(state variables).
 ![](https://i.imgur.com/pcKYn2W.png)
 
 in our proxy.sol contract, copy and paste the code below:
 ```
-//SPDX-License-Identifier: MIT
-
-pragma solidity 0.8.18;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.0;
 
 contract Proxy {
     // Code position in storage is keccak256("PROXIABLE") = "0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7"
+    address private contractLogic; // Address variable to store the contract logic
 
-    constructor(address contractLogic) {
-        // save the code address
-        assembly { // solium-disable-line
-            sstore(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7, contractLogic)
-        }
+    constructor(address _contractLogic) {
+        // Save the code address during contract deployment
+        contractLogic = _contractLogic;
     }
 
     fallback() external payable {
         assembly {
-            let contractLogic := sload(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7)
+            // Load the contract logic address from storage
+            let logic := sload(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7)
+            // Copy the calldata (input data) to memory
             calldatacopy(0x0, 0x0, calldatasize())
-            let success := delegatecall(sub(gas(), 10000), contractLogic, 0x0, calldatasize(), 0, 0)
+            // Delegatecall to the contract logic address with the copied calldata
+            // and limited gas (subtracting 10000 from the current gas)
+            let success := delegatecall(sub(gas(), 10000), logic, 0x0, calldatasize(), 0, 0)
+            // Get the size of the returndata (output data)
             let retSz := returndatasize()
+            // Copy the returndata to memory
             returndatacopy(0, 0, retSz)
+            // Check the success of the delegatecall
             switch success
             case 0 {
+                // If delegatecall fails, revert with the returndata
                 revert(0, retSz)
             }
             default {
+                // Otherwise, return the returndata
                 return(0, retSz)
             }
         }
@@ -123,6 +131,7 @@ contract Proxy {
 
     receive() external payable {}
 }
+
 ```
 ![](https://i.imgur.com/Ho4OTfu.png)
 
@@ -138,23 +147,27 @@ in our *proxiable.sol*, copy and paste the code below:
 
 pragma solidity 0.8.18;
 
-
 contract Proxiable {
     // Code position in storage is keccak256("PROXIABLE") = "0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7"
 
     function updateCodeAddress(address newAddress) internal {
+        // Check if the given newAddress is compatible with the current contract
         require(
             bytes32(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7) == Proxiable(newAddress).proxiableUUID(),
             "Not compatible"
         );
+        // Store the new code address in storage
         assembly {
             sstore(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7, newAddress)
         }
     }
+
     function proxiableUUID() public pure returns (bytes32) {
+        // Return the UUID (unique identifier) for this contract
         return 0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7;
     }
 }
+
 ```
 *proxiable.sol contract* will be inherited by our logic contract and it is responsible for upgradeability.
 
@@ -165,42 +178,44 @@ We will create our simple bank contract file using the name *celoBank.sol*, then
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
+import {Proxiable} from "../contracts/proxiable.sol"; // Importing Proxiable contract
 
-import {Proxiable} from "../contracts/proxiable.sol";
+contract celoBank is Proxiable {
+    // State variables
+    mapping(address => uint256) usersDeposit; // Mapping to store users' deposit amount
+    address owner; // Address of the contract owner
+    bool initialized; // Boolean flag to track contract initialization status
 
-contract celoBank is Proxiable{
-
-    mapping(address => uint256) usersDeposit;
-
-    address owner;
-    bool initialized;
-    
-
+    // Function to initialize the contract
     function init(address _addr) external {
-        require(!initialized, "Already initialized");
-        owner = _addr;
-        initialized = true;
+        require(!initialized, "Already initialized"); // Check if contract is not already initialized
+        owner = _addr; // Set the contract owner
+        initialized = true; // Mark the contract as initialized
     }
 
+    // Function to get the contract owner
     function admin() external view returns(address) {
-        return owner;
+        return owner; // Return the address of the contract owner
     }
 
-
+    // Function to deposit funds into the contract
     function deposit() external payable {
-        require(msg.value != 0, "Amount can't be zero");
-        usersDeposit[msg.sender] += msg.value;
+        require(msg.value != 0, "Amount can't be zero"); // Check if deposit amount is not zero
+        usersDeposit[msg.sender] += msg.value; // Add deposited amount to user's deposit balance
     }
 
+    // Function to get user's deposit balance
     function userBalance(address _addr) external view returns(uint256){
-        return usersDeposit[_addr];
+        return usersDeposit[_addr]; // Return the deposit balance of the specified address
     }
 
+    // Function to upgrade the contract to a new address
     function upgradeContract(address _newAddress) external {
-        require(msg.sender == owner, "You are not an admin");
-        updateCodeAddress(_newAddress);
+        require(msg.sender == owner, "You are not an admin"); // Check if the caller is the contract owner
+        updateCodeAddress(_newAddress); // Call the Proxiable contract's updateCodeAddress function to upgrade the contract
     }
 }
+
 ```
 Next is to setup our hardhat config. We need to install dotenv by pasting the code below in our terminal:
 
@@ -213,23 +228,21 @@ We can then, create a file named *.env* and paste our private key in our *.env*.
 Now, to the main hardhat setup for our celo alfajores testnet, copy and paste the code below in hardhat.config.ts:
 
 ```
-import "@nomicfoundation/hardhat-toolbox";
-require("dotenv").config({path: ".env"});
+import "@nomicfoundation/hardhat-toolbox"; // Importing Hardhat Toolbox for additional functionality
+require("dotenv").config({path: ".env"}); // Loading environment variables from .env file
 
-
-const PRIVATE_KEY = process.env.PRIVATE_KEY
-
-
+const PRIVATE_KEY = process.env.PRIVATE_KEY // Storing the private key from environment variable
 
 module.exports = {
-  solidity: "0.8.18",
+  solidity: "0.8.18", // Specifying the version of Solidity to be used
   networks: {
     alfajores: {
-      url: "https://alfajores-forno.celo-testnet.org",
-      accounts: [PRIVATE_KEY]
+      url: "https://alfajores-forno.celo-testnet.org", // URL of the Alfajores Celo testnet node
+      accounts: [PRIVATE_KEY] // Specifying the private key for the accounts to be used for deployment
     }
   }
 }
+
 
 ```
 Before moving to writing a script for our contract, we need to compile the code with this command in our terminal:
@@ -238,43 +251,38 @@ Before moving to writing a script for our contract, we need to compile the code 
 let's go on to deploy and interact. In our *deploy.ts* copy and paste this code to deploy our contract on celo Alfajores testnet:
 
 ```
-import { ethers} from "hardhat";
+import { ethers } from "hardhat"; // Importing ethers library for interacting with Ethereum contracts
 
 async function main() {
-
   const ABI = [
-    "function init(address _addr)"
+    "function init(address _addr)" // ABI of the 'init' function in the contract
   ];
 
-  const iProxy = new ethers.utils.Interface(ABI);
+  const iProxy = new ethers.utils.Interface(ABI); // Creating an instance of the ethers Interface with the ABI
 
-  const constructData = iProxy.encodeFunctionData("init", ["0x5DE9d9C1dC9b407a9873E2F428c54b74c325b82b"]);
+  const constructData = iProxy.encodeFunctionData("init", ["0x5DE9d9C1dC9b407a9873E2F428c54b74c325b82b"]); // Encoding the 'init' function call data with the arguments
 
-  console.log(constructData, "construct data")
+  console.log(constructData, "construct data"); // Logging the encoded function call data
 
-  // deploy implementation/logic contract
-  const CeloBank = await ethers.getContractFactory("celoBank")
-  const celoBank = await CeloBank.deploy()
+  // Deploying the implementation/logic contract
+  const CeloBank = await ethers.getContractFactory("celoBank"); // Getting the contract factory for 'celoBank'
+  const celoBank = await CeloBank.deploy(); // Deploying 'celoBank' contract
 
-  await celoBank.deployed()
-  console.log(`Celo bank deployed to ${celoBank.address}`)
+  await celoBank.deployed(); // Waiting for the contract deployment to be confirmed
+  console.log(`Celo bank deployed to ${celoBank.address}`); // Logging the deployed contract's address
 
+  // Deploying the proxy contract
+  const Proxy = await ethers.getContractFactory("Proxy"); // Getting the contract factory for 'Proxy'
+  const proxy = await Proxy.deploy(constructData, celoBank.address); // Deploying 'Proxy' contract with the encoded function call data and 'celoBank' contract address as arguments
 
-  // deploy proxy contract
-  const Proxy = await ethers.getContractFactory("Proxy")
-  const proxy = await Proxy.deploy(constructData,celoBank.address)
-
-  await proxy.deployed()
-  console.log(`Proxy contract deployed to ${celoBank.address}`);
-  
-
+  await proxy.deployed(); // Waiting for the contract deployment to be confirmed
+  console.log(`Proxy contract deployed to ${celoBank.address}`); // Logging the deployed contract's address
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+// Using async/await pattern to handle asynchronous tasks and errors properly
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+  console.error(error); // Logging any errors that occurred during contract deployment
+  process.exitCode = 1; // Setting the exit code to 1 to indicate an error occurred
 });
 
 ```
@@ -328,73 +336,77 @@ let's go on to create another implementation with withdrawal option. name it cel
 ```
 // SPDX-License-Identifier: MIT
 
-
 pragma solidity 0.8.18;
-import {Proxiable} from "../contracts/proxiable.sol";
 
-contract celoBankUpgrade is Proxiable{
+import { Proxiable } from "../contracts/proxiable.sol"; // Importing the 'Proxiable' contract from a separate file
 
-    mapping(address => uint256) usersDeposit;
+contract celoBankUpgrade is Proxiable {
+    mapping(address => uint256) usersDeposit; // Mapping to store users' deposits
 
-    address owner;
-    bool initialized;
-    
+    address owner; // Address of the contract owner
+    bool initialized; // Flag to track contract initialization status
 
+    // Function to initialize the contract with the owner's address
     function init(address _addr) external {
-        require(!initialized, "Already initialized");
-        owner = _addr;
-        initialized = true;
+        require(!initialized, "Already initialized"); // Allowing initialization only once
+        owner = _addr; // Setting the owner's address
+        initialized = true; // Marking the contract as initialized
     }
 
-    function admin() external view returns(address) {
+    // Function to get the address of the contract owner
+    function admin() external view returns (address) {
         return owner;
     }
 
-
+    // Function to deposit Ether into the contract
     function deposit() external payable {
-        require(msg.value != 0, "Amount can't be zero");
-        usersDeposit[msg.sender] += msg.value;
+        require(msg.value != 0, "Amount can't be zero"); // Checking that the deposited amount is not zero
+        usersDeposit[msg.sender] += msg.value; // Adding the deposited amount to the user's deposit balance
     }
 
+    // Function to withdraw Ether from the contract
     function withdraw() external {
-        uint256 myBalance = usersDeposit[msg.sender];
-        usersDeposit[msg.sender] = 0;
-        (bool success, ) = payable(msg.sender).call{value: myBalance}("");
-        require(success, "Invalid");
+        uint256 myBalance = usersDeposit[msg.sender]; // Storing the user's deposit balance
+        usersDeposit[msg.sender] = 0; // Setting the user's deposit balance to zero
+        (bool success, ) = payable(msg.sender).call{ value: myBalance }(""); // Transferring the withdrawn amount to the user's address
+        require(success, "Invalid"); // Checking if the transfer was successful
     }
 
-    function userBalance(address _addr) external view returns(uint256){
-        return usersDeposit[_addr];
+    // Function to get the deposit balance of a user
+    function userBalance(address _addr) external view returns (uint256) {
+        return usersDeposit[_addr]; // Returning the deposit balance of the specified user
     }
 
+    // Function to upgrade the contract to a new address by the contract owner
     function upgradeContract(address _newAddress) external {
-        require(msg.sender == owner, "You are not an admin");
-        updateCodeAddress(_newAddress);
+        require(msg.sender == owner, "You are not an admin"); // Checking if the caller is the contract owner
+        updateCodeAddress(_newAddress); // Updating the contract's code address to the new address
     }
 }
+
 ```
 
 Now that we have created a new contract with withdraw function, we need to deploy our *celoBankUpgrade.sol*. Create a deploy file with a name *deployUpgrade.ts* and paste the following code below:
 
 ```
-import { ethers} from "hardhat";
-
+import { ethers } from "hardhat"; // Importing ethers library for interacting with Ethereum contracts
 
 async function main() {
-    const CeloBankUpgrade = await ethers.getContractFactory("celoBankUpgrade");
-    const celoBankUpgrade = await CeloBankUpgrade.deploy();
+    const CeloBankUpgrade = await ethers.getContractFactory("celoBankUpgrade"); // Getting the contract factory for "celoBankUpgrade" contract
+    const celoBankUpgrade = await CeloBankUpgrade.deploy(); // Deploying the "celoBankUpgrade" contract
 
-    await celoBankUpgrade.deployed();
+    await celoBankUpgrade.deployed(); // Waiting for the contract deployment to complete
 
-    console.log(`celo bank upgrade deployed to ${celoBankUpgrade.address}`)
+    console.log(`celo bank upgrade deployed to ${celoBankUpgrade.address}`); // Logging the deployed contract's address
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+    console.error(error); // Logging any errors that occur during contract deployment
+    process.exitCode = 1; // Setting the exit code to 1 to indicate an error occurred
 });
+
 ```
 If everything is right, should look like what we have below
 ![](https://i.imgur.com/GrnT2Lp.png)
@@ -423,9 +435,6 @@ UUPS is not the only upgradeable contract standard. We have:
 - Diamond Standard (little bit advanced than UUPS)
 - Transparent Upgradeable Proxy
 
-
 Thank you for following up till the end of this tutorial, I hope you have learned something new. Good learning!!
 
 Here's a link to the project [UUPS for celo blockchain](https://)
-
-
