@@ -7,17 +7,17 @@ The concept of Smart Contract being immutable is a great idea that create enough
 
 ## Table of Contents
 - [Building an Upgradeable Contract](#building-an-upgradeable-contract)
-    - [Introduction](#introduction)
-    - [Table of Content](#table-of-contents)
-    - [Objective](#Objective)
-    - [Prerequisite](#Prerequisites)
-    - [Requirement](#Requirements)
-    - [Tutorial](#Tutorial)
-        - [Step 1 - Spin off hardhat environment](#STEP-1---Spin-off-Hardhat-Environment)
-        - [Step 2 - Create a simple upgradeable smart contract](#STEP-2---Create-a-simple-upgradeable-bank-contract)
-        - [Step 3 - Simple bank contract with withdraw defect](#STEP-3---Simple-bank-contract-with-Withdraw-defect)
-        - [Step 4 - Interacting with our deployed contract](#STEP-4---Interacting-with-our-deployed-Contract)
-        - [Step 5 - Upgrade Celo Bank contract to solve bug](#STEP-5---Upgrade-Celo-Bank-contract-to-solve-bug)
+  - [Introduction](#introduction)
+  - [Table of Contents](#table-of-contents)
+  - [Objective](#objective)
+  - [Prerequisites](#prerequisites)
+  - [Requirements](#requirements)
+  - [Tutorial](#tutorial)
+    - [STEP 1 - Spin off Hardhat Environment](#step-1---spin-off-hardhat-environment)
+    - [STEP 2 - Setup Upgradeable Contract](#step-2---setup-upgradeable-contract)
+    - [STEP 3 - Simple bank contract with Withdraw defect](#step-3---simple-bank-contract-with-withdraw-defect)
+    - [STEP 4 - Interacting with our deployed Contract](#step-4---interacting-with-our-deployed-contract)
+    - [STEP 5 - Upgrade Celo Bank contract to solve bug](#step-5---upgrade-celo-bank-contract-to-solve-bug)
     - [Conclusion](#conclusion)
 ## Objective
 By the end of this tutorial you should be able to write an upgradeable smart contract using the **Universal Upgradeable Proxy Standard (UUPS)**
@@ -150,6 +150,10 @@ contract Proxiable {
 ```
 *proxiable.sol contract* will be inherited by our logic contract and it is responsible for upgradeability
 
+> - The `updateCodeAddress` function updates a contract's implementation address by storing the new address at the location corresponding to the keccak256 hash of the string "PROXIABLE" in storage. The function checks if the new implementation contract is compatible with the Proxiable contract by comparing its UUID with the expected value, and then sets the new address using the sstore opcode.
+>   
+> - The `proxiableUUID` function returns the expected UUID for the implementation contract, which is the same keccak256 hash as the one used to store the code position in storage.
+
 ### STEP 3 - Simple bank contract with Withdraw defect
 We will create our simple bank contract file using the name *celoBank.sol*, then copy and paste what we have below.
 ```
@@ -193,6 +197,18 @@ contract celoBank is Proxiable{
     }
 }
 ```
+
+> The code defines a smart contract called celoBank, which inherits from Proxiable contract. The contract has a mapping named `usersDeposit`, which maps a user's address to their deposit. The contract also has an `owner` state variable that tracks owners address and an `initialized` boolean state variable.
+> 
+> The `init` function is used to set the owner address and is called only once during initialization. The `admin` function is used to return the owner address.
+> 
+> The `deposit` function is used to accept deposits from users and the deposited amount is added to the `usersDeposit` mapping for the respective user's address.
+> 
+> The `userBalance` function is used to get the deposited balance of a user's address.
+> 
+> Finally, the `upgradeContract` function is used to upgrade the contract implementation by calling the updateCodeAddress function from the Proxiable contract. Only the contract owner can call this function.
+> 
+
 Next is to setup our hardhat config. We need to install dotenv by pasting the code below in our terminal
 
 > npm install dotenv
@@ -269,6 +285,12 @@ main().catch((error) => {
 });
 
 ```
+> This script uses the Hardhat framework and Ethers.js library to deploy two contracts: celoBank and a proxy contract.
+> - The `ABI` variable stores an array of function signatures of the celoBank contract.
+> -  The `iProxy` variable uses the Interface method from Ethers.js to encode the init function signature of celoBank along with the constructor arguments into constructData.
+> 
+> Next, the CeloBank factory is obtained, and celoBank is deployed. The Proxy contract factory is also obtained, and a new instance of Proxy is deployed with the constructData and celoBank's address as arguments. Finally, the script logs the deployment addresses of both contracts.
+
 Since we have our script fully written, we need to paste this command below in our terminal
 > npx hardhat run scripts/deploy.ts --network alfajores
 
