@@ -215,7 +215,7 @@ Next is to setup our hardhat config. We need to install dotenv by pasting the co
 
 we can then create a file named *.env* and paste our private key in our *.env*. It should look like what we have below
 
-![](https://i.imgur.com/oyfaIXR.png)
+
 
 Now, to the main hardhat setup for our celo alfajores testnet, copy and paste the code below in hardhat.config.ts
 
